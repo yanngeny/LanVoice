@@ -1,0 +1,21 @@
+# Dépendances pour LanVoice
+# Installation: pip install -r requirements.txt
+
+# Audio
+pyaudio>=0.2.11
+
+# Calcul numérique pour le VU-mètre
+numpy>=1.21.0
+
+# Informations système pour le logging
+psutil>=5.8.0
+
+# Interface graphique (inclus avec Python)
+# tkinter est inclus dans la distribution standard de Python
+
+# Utilitaires pour la création d'exécutables
+pyinstaller>=5.0
+
+# Optionnel: pour de meilleures performances audio
+# sounddevice>=0.4.6
+# numpy>=1.21.0
