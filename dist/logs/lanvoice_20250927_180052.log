@@ -1,0 +1,136 @@
+================================================================================
+LanVoice - Session démarrée le 2025-09-27 18:00:52
+================================================================================
+Python: 3.13.7 (tags/v3.13.7:bcee1c3, Aug 14 2025, 14:15:11) [MSC v.1944 64 bit (AMD64)]
+Plateforme: win32
+Arguments: ['C:\\Users\\ygeny_itlink\\Documents\\LanVoice\\dist\\LanVoice.exe']
+================================================================================
+
+2025-09-27 18:00:52 - LanVoice - INFO - logger.py:126 - _setup_logging() - ==================================================
+2025-09-27 18:00:52 - LanVoice - INFO - logger.py:127 - _setup_logging() - DÉMARRAGE DE LANVOICE
+2025-09-27 18:00:52 - LanVoice - INFO - logger.py:128 - _setup_logging() - ==================================================
+2025-09-27 18:00:52 - LanVoice - INFO - logger.py:129 - _setup_logging() - Fichier de log: logs\lanvoice_20250927_180052.log
+2025-09-27 18:00:52 - LanVoice - INFO - logger.py:130 - _setup_logging() - Niveau de log: DEBUG
+2025-09-27 18:00:52 - LanVoice.System - INFO - logger.py:146 - log_system_info() - === INFORMATIONS SYSTÈME ===
+2025-09-27 18:00:52 - LanVoice.System - INFO - logger.py:147 - log_system_info() - OS: Windows 11 10.0.26100
+2025-09-27 18:00:52 - LanVoice.System - INFO - logger.py:148 - log_system_info() - Architecture: ('64bit', 'WindowsPE')
+2025-09-27 18:00:52 - LanVoice.System - INFO - logger.py:149 - log_system_info() - Processeur: Intel64 Family 6 Model 170 Stepping 4, GenuineIntel
+2025-09-27 18:00:52 - LanVoice.System - INFO - logger.py:150 - log_system_info() - RAM totale: 31.46 GB
+2025-09-27 18:00:52 - LanVoice.System - INFO - logger.py:151 - log_system_info() - RAM disponible: 6.80 GB
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:169 - log_audio_devices() - === PÉRIPHÉRIQUES AUDIO ===
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:172 - log_audio_devices() - Nombre de périphériques: 21
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:177 - log_audio_devices() - Device 0: Mappeur de sons Microsoft - Input
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:178 - log_audio_devices() -   - Max input channels: 2
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:179 - log_audio_devices() -   - Max output channels: 0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:180 - log_audio_devices() -   - Default sample rate: 44100.0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:177 - log_audio_devices() - Device 1: Microphone Array (2- Realtek(R)
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:178 - log_audio_devices() -   - Max input channels: 4
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:179 - log_audio_devices() -   - Max output channels: 0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:180 - log_audio_devices() -   - Default sample rate: 44100.0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:177 - log_audio_devices() - Device 2: Mappeur de sons Microsoft - Output
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:178 - log_audio_devices() -   - Max input channels: 0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:179 - log_audio_devices() -   - Max output channels: 2
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:180 - log_audio_devices() -   - Default sample rate: 44100.0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:177 - log_audio_devices() - Device 3: Haut-parleur (2- Realtek(R) Aud
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:178 - log_audio_devices() -   - Max input channels: 0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:179 - log_audio_devices() -   - Max output channels: 2
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:180 - log_audio_devices() -   - Default sample rate: 44100.0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:177 - log_audio_devices() - Device 4: Pilote de capture audio principal
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:178 - log_audio_devices() -   - Max input channels: 2
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:179 - log_audio_devices() -   - Max output channels: 0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:180 - log_audio_devices() -   - Default sample rate: 44100.0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:177 - log_audio_devices() - Device 5: Microphone Array (2- Realtek(R) Audio)
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:178 - log_audio_devices() -   - Max input channels: 4
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:179 - log_audio_devices() -   - Max output channels: 0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:180 - log_audio_devices() -   - Default sample rate: 44100.0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:177 - log_audio_devices() - Device 6: PÃ©riphÃ©rique audio principal
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:178 - log_audio_devices() -   - Max input channels: 0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:179 - log_audio_devices() -   - Max output channels: 2
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:180 - log_audio_devices() -   - Default sample rate: 44100.0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:177 - log_audio_devices() - Device 7: Haut-parleur (2- Realtek(R) Audio)
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:178 - log_audio_devices() -   - Max input channels: 0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:179 - log_audio_devices() -   - Max output channels: 2
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:180 - log_audio_devices() -   - Default sample rate: 44100.0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:177 - log_audio_devices() - Device 8: Haut-parleur (2- Realtek(R) Audio)
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:178 - log_audio_devices() -   - Max input channels: 0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:179 - log_audio_devices() -   - Max output channels: 2
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:180 - log_audio_devices() -   - Default sample rate: 48000.0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:177 - log_audio_devices() - Device 9: Microphone Array (2- Realtek(R) Audio)
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:178 - log_audio_devices() -   - Max input channels: 2
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:179 - log_audio_devices() -   - Max output channels: 0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:180 - log_audio_devices() -   - Default sample rate: 48000.0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:177 - log_audio_devices() - Device 10: Microphone Array 1 (Realtek HD Audio Mic input with SST)
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:178 - log_audio_devices() -   - Max input channels: 2
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:179 - log_audio_devices() -   - Max output channels: 0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:180 - log_audio_devices() -   - Default sample rate: 48000.0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:177 - log_audio_devices() - Device 11: Microphone Array 2 (Realtek HD Audio Mic input with SST)
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:178 - log_audio_devices() -   - Max input channels: 4
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:179 - log_audio_devices() -   - Max output channels: 0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:180 - log_audio_devices() -   - Default sample rate: 16000.0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:177 - log_audio_devices() - Device 12: Microphone Array 3 (Realtek HD Audio Mic input with SST)
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:178 - log_audio_devices() -   - Max input channels: 4
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:179 - log_audio_devices() -   - Max output channels: 0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:180 - log_audio_devices() -   - Default sample rate: 16000.0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:177 - log_audio_devices() - Device 13: Stereo Mix (Realtek HD Audio Stereo input)
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:178 - log_audio_devices() -   - Max input channels: 2
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:179 - log_audio_devices() -   - Max output channels: 0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:180 - log_audio_devices() -   - Default sample rate: 48000.0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:177 - log_audio_devices() - Device 14: FrontMic (Realtek HD Audio Front Mic input)
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:178 - log_audio_devices() -   - Max input channels: 2
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:179 - log_audio_devices() -   - Max output channels: 0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:180 - log_audio_devices() -   - Default sample rate: 48000.0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:177 - log_audio_devices() - Device 15: Headphones 1 (Realtek HD Audio 2nd output with SST)
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:178 - log_audio_devices() -   - Max input channels: 0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:179 - log_audio_devices() -   - Max output channels: 2
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:180 - log_audio_devices() -   - Default sample rate: 48000.0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:177 - log_audio_devices() - Device 16: Headphones 2 (Realtek HD Audio 2nd output with SST)
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:178 - log_audio_devices() -   - Max input channels: 0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:179 - log_audio_devices() -   - Max output channels: 2
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:180 - log_audio_devices() -   - Default sample rate: 44100.0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:177 - log_audio_devices() - Device 17: PC Speaker (Realtek HD Audio 2nd output with SST)
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:178 - log_audio_devices() -   - Max input channels: 2
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:179 - log_audio_devices() -   - Max output channels: 0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:180 - log_audio_devices() -   - Default sample rate: 48000.0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:177 - log_audio_devices() - Device 18: Speakers 1 (Realtek HD Audio output with SST)
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:178 - log_audio_devices() -   - Max input channels: 0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:179 - log_audio_devices() -   - Max output channels: 2
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:180 - log_audio_devices() -   - Default sample rate: 48000.0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:177 - log_audio_devices() - Device 19: Speakers 2 (Realtek HD Audio output with SST)
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:178 - log_audio_devices() -   - Max input channels: 0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:179 - log_audio_devices() -   - Max output channels: 2
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:180 - log_audio_devices() -   - Default sample rate: 44100.0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:177 - log_audio_devices() - Device 20: PC Speaker (Realtek HD Audio output with SST)
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:178 - log_audio_devices() -   - Max input channels: 2
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:179 - log_audio_devices() -   - Max output channels: 0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:180 - log_audio_devices() -   - Default sample rate: 48000.0
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:187 - log_audio_devices() - Périphérique entrée par défaut: Microphone Array (2- Realtek(R)
+2025-09-27 18:00:52 - LanVoice.Audio - INFO - logger.py:193 - log_audio_devices() - Périphérique sortie par défaut: Haut-parleur (2- Realtek(R) Aud
+2025-09-27 18:00:52 - LanVoice.Network - INFO - logger.py:211 - log_network_info() - === INFORMATIONS RÉSEAU ===
+2025-09-27 18:00:52 - LanVoice.Network - INFO - logger.py:215 - log_network_info() - Nom d'hôte: H146M34-ITL
+2025-09-27 18:00:52 - LanVoice.Network - INFO - logger.py:224 - log_network_info() - IP locale: 192.168.1.139
+2025-09-27 18:00:52 - LanVoice.Network - INFO - logger.py:233 - log_network_info() - Adresse IPv4: 192.168.1.139
+2025-09-27 18:00:52 - LanVoice.Network - INFO - logger.py:233 - log_network_info() - Adresse IPv4: 172.29.16.1
+2025-09-27 18:00:52 - LanVoice.GUI - INFO - gui.py:51 - __init__() - Initialisation de l'interface graphique
+2025-09-27 18:00:52 - LanVoice.GUI - INFO - gui.py:212 - on_mode_change() - Changement de mode: client
+2025-09-27 18:00:52 - LanVoice.GUI - DEBUG - gui.py:223 - on_mode_change() - Interface configurée en mode client
+2025-09-27 18:00:52 - LanVoice.GUI - INFO - gui.py:470 - log() - UI: Application démarrée
+2025-09-27 18:00:52 - LanVoice.GUI - INFO - gui.py:58 - __init__() - Interface graphique initialisée
+2025-09-27 18:00:52 - LanVoice.GUI - DEBUG - gui.py:59 - __init__() - Fenêtre: 1x1+0+0, Mode: client
+2025-09-27 18:01:20 - LanVoice.GUI - INFO - gui.py:470 - log() - UI: IP locale détectée: 192.168.1.139
+2025-09-27 18:01:23 - LanVoice.GUI - INFO - gui.py:212 - on_mode_change() - Changement de mode: server
+2025-09-27 18:01:23 - LanVoice.GUI - DEBUG - gui.py:218 - on_mode_change() - Interface configurée en mode serveur
+2025-09-27 18:01:23 - LanVoice.Server - INFO - server.py:29 - __init__() - Serveur initialisé - Host: 0.0.0.0, Port: 12345
+2025-09-27 18:01:23 - LanVoice.Server - INFO - server.py:40 - start() - Serveur vocal démarré sur 0.0.0.0:12345
+2025-09-27 18:01:23 - LanVoice.Server - INFO - server.py:41 - start() - En attente de connexions...
+2025-09-27 18:01:23 - LanVoice.Server - DEBUG - server.py:42 - start() - Socket configuré avec SO_REUSEADDR, listen(10)
+2025-09-27 18:01:23 - LanVoice.GUI - INFO - gui.py:470 - log() - UI: Serveur démarré sur le port 12345
+2025-09-27 18:01:23 - LanVoice.GUI - INFO - gui.py:276 - start_server() - Serveur démarré avec succès - Port: 12345, Thread: Thread-1 (start)
+2025-09-27 18:01:23 - LanVoice.Client - INFO - client.py:62 - __init__() - Client initialisé - Host: 127.0.0.1, Port: 12345
+2025-09-27 18:01:23 - LanVoice.Client - DEBUG - client.py:63 - __init__() - Configuration audio - Format: 8, Channels: 1, Rate: 44100, Chunk: 1024
+2025-09-27 18:01:27 - LanVoice.Server - INFO - server.py:186 - stop() - Serveur arrêté
+2025-09-27 18:01:27 - LanVoice.Server - INFO - server.py:186 - stop() - Serveur arrêté
+2025-09-27 18:01:27 - LanVoice.Client - INFO - client.py:188 - stop_recording() - Enregistrement arrêté
+2025-09-27 18:01:27 - LanVoice.Client - INFO - client.py:227 - stop_playing() - Lecture arrêtée
+2025-09-27 18:01:27 - LanVoice.Client - INFO - client.py:139 - disconnect() - Déconnecté du serveur
+2025-09-27 18:01:27 - LanVoice.GUI - INFO - gui.py:470 - log() - UI: Serveur arrêté
+2025-09-27 18:01:29 - LanVoice.Main - INFO - main.py:50 - main() - Application fermée normalement
