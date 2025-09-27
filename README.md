@@ -22,6 +22,12 @@ LanVoice est une application Python de chat vocal en réseau local (LAN) avec in
 - **Rotation des logs** : Gestion automatique de la taille des fichiers de log
 - **Nettoyage automatique** : Logs effacés à chaque démarrage
 
+### 🚨 Gestion d'Erreurs Avancée
+- **Messages détaillés** : Erreurs explicites avec causes possibles et solutions
+- **Diagnostic automatique** : Identification des problèmes réseau et audio
+- **Support multi-langues** : Messages d'erreur en français avec contexte technique
+- **Logging verbeux** : Tous les détails techniques sauvegardés pour debug
+
 ## Installation
 
 ### Prérequis
@@ -201,10 +207,29 @@ Les contributions sont les bienvenues ! N'hésitez pas à:
 
 Ce projet est libre d'utilisation pour un usage personnel et éducatif.
 
-## 📞 Support
+## � Dépannage Avancé
+
+LanVoice intègre maintenant une **gestion d'erreurs intelligente** qui vous guide automatiquement :
+
+### Messages d'Erreur Informatifs
+- **Erreurs de serveur** : Diagnostic automatique des problèmes de port, permissions, réseau
+- **Erreurs de connexion** : Identification précise des causes (DNS, timeout, refus de connexion)  
+- **Solutions proposées** : Actions concrètes suggérées pour chaque type d'erreur
+
+### Test des Erreurs
+```bash
+python test_verbose_errors.py
+```
+
+### Documentation Complète
+Consultez [`GESTION_ERREURS.md`](GESTION_ERREURS.md) pour le guide complet de dépannage.
+
+## �📞 Support
 
 Pour toute question ou problème:
-1. Consultez la section Dépannage ci-dessus
+1. **Vérifiez les messages d'erreur** : L'application fournit maintenant des diagnostics détaillés
+2. **Consultez les logs** : Dossier `logs/` avec informations techniques complètes
+3. **Lisez la documentation** : [`GESTION_ERREURS.md`](GESTION_ERREURS.md) pour les cas spécifiques
 2. Vérifiez que toutes les dépendances sont installées
 3. Testez d'abord en mode local (127.0.0.1)
 
