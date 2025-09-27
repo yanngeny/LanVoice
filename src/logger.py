@@ -7,7 +7,13 @@ import logging
 import os
 import sys
 from datetime import datetime
-from logging.handlers import RotatingFileHandler
+
+# Import conditionnel pour PyInstaller
+try:
+    from logging.handlers import RotatingFileHandler
+    HAS_ROTATING_HANDLER = True
+except ImportError:
+    HAS_ROTATING_HANDLER = False
 
 class LanVoiceLogger:
     def __init__(self, log_dir="logs", max_files=10):
@@ -84,10 +90,15 @@ class LanVoiceLogger:
             datefmt='%Y-%m-%d %H:%M:%S'
         )
         
-        # Handler pour fichier
-        file_handler = logging.FileHandler(self.log_file, encoding='utf-8')
-        file_handler.setLevel(logging.DEBUG)
-        file_handler.setFormatter(formatter)
+        # Handler pour fichier (compatible PyInstaller)
+        try:
+            file_handler = logging.FileHandler(self.log_file, encoding='utf-8')
+            file_handler.setLevel(logging.DEBUG)
+            file_handler.setFormatter(formatter)
+        except Exception as e:
+            # Fallback si problème avec le fichier de log
+            print(f"Attention: Impossible de créer le fichier de log: {e}")
+            file_handler = None
         
         # Handler pour console (optionnel, plus concis)
         console_handler = logging.StreamHandler()
@@ -104,7 +115,8 @@ class LanVoiceLogger:
             root_logger.removeHandler(handler)
         
         # Ajouter nos handlers
-        root_logger.addHandler(file_handler)
+        if file_handler:
+            root_logger.addHandler(file_handler)
         root_logger.addHandler(console_handler)
         
         # Logger spécifique pour LanVoice

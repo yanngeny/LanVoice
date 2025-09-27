@@ -11,8 +11,8 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 src_dir = os.path.join(current_dir, 'src')
 sys.path.insert(0, src_dir)
 
-# Initialiser le logging en premier
-from logger import init_logging, get_logger, log_startup_complete
+# Initialiser le logging en premier (import après ajout du chemin)
+from src.logger import init_logging, get_logger, log_startup_complete
 
 def main():
     """Point d'entrée principal de l'application"""
@@ -44,7 +44,7 @@ def main():
         logger.info("Démarrage de l'interface graphique...")
         log_startup_complete()
         
-        from gui import main as gui_main
+        from src.gui import main as gui_main
         gui_main()
         
         logger.info("Application fermée normalement")

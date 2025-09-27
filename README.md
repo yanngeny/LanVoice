@@ -1,33 +1,36 @@
-# LanVoice - Chat Vocal en Réseau Local
+# LanVoice - Application de Chat Vocal LAN
 
-LanVoice est une application Python qui permet de créer un système de chat vocal en temps réel sur un réseau local (LAN). L'application offre une interface graphique intuitive pour héberger un serveur vocal ou se connecter comme client.
+## Description
+LanVoice est une application Python de chat vocal en réseau local (LAN) avec interface graphique. Elle permet de créer un serveur vocal et de s'y connecter pour communiquer en temps réel avec d'autres utilisateurs sur le même réseau.
 
-## 🎯 Fonctionnalités
+## Fonctionnalités
 
-- **Mode Serveur**: Hébergez un serveur vocal pour permettre à plusieurs clients de se connecter
-- **Mode Client**: Connectez-vous à un serveur existant pour participer au chat vocal
-- **Interface Graphique**: Interface utilisateur moderne et intuitive avec tkinter
-- **Audio en Temps Réel**: Capture du microphone et lecture audio simultanées
-- **VU-mètre**: Affichage visuel du niveau audio en temps réel avec indicateur coloré
-- **Mode VOX**: Activation vocale automatique basée sur un seuil configurable
-- **Contrôle de Seuil**: Réglage précis du niveau de déclenchement (0-50%)
-- **Multi-clients**: Support de connexions multiples sur le même serveur
-- **Détection IP**: Détection automatique de l'adresse IP locale
-- **Journal d'activité**: Suivi des connexions et événements en temps réel
-- **Logging avancé**: Système de logs détaillés avec rotation automatique
+### 🎙️ Chat Vocal
+- **Mode Serveur** : Héberge une session vocal pour plusieurs clients
+- **Mode Client** : Se connecte à un serveur vocal existant
+- **Audio en temps réel** : Capture et diffusion audio avec PyAudio
 
-## 📋 Prérequis
+### 📊 Interface Avancée
+- **VU-Meter** : Affichage visuel du niveau audio en temps réel
+- **VOX (Voice Activated Transmission)** : Transmission automatique basée sur le niveau sonore
+- **Seuil ajustable** : Contrôle de la sensibilité de déclenchement vocal
+- **Indicateurs de statut** : Statut de connexion et transmission en temps réel
 
-- Python 3.7 ou supérieur
-- Microphone et haut-parleurs/casque
-- Réseau local (LAN) ou connexion localhost pour les tests
+### 📝 Logging Complet
+- **Journalisation détaillée** : Logs de toutes les opérations
+- **Informations système** : CPU, mémoire, réseau automatiquement loggés
+- **Rotation des logs** : Gestion automatique de la taille des fichiers de log
+- **Nettoyage automatique** : Logs effacés à chaque démarrage
 
-## 🚀 Installation
+## Installation
 
-1. **Clonez ou téléchargez le projet**
-   ```bash
-   git clone <url_du_projet>
-   cd LanVoice
+### Prérequis
+- Python 3.7+
+- Windows (testé sur Windows 11)
+
+### Installation des dépendances
+```bash
+pip install -r requirements.txt
    ```
 
 2. **Installez les dépendances**
