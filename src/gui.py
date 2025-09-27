@@ -258,6 +258,12 @@ class LanVoiceGUI:
         """Démarre le serveur"""
         try:
             port = int(self.server_port.get())
+            
+            # Validation du port
+            if not (1 <= port <= 65535):
+                raise ValueError(f"Le port doit être entre 1 et 65535. Port fourni: {port}")
+            
+            logger.info(f"Tentative de démarrage du serveur sur le port {port}")
             self.server = VoiceServer(host="0.0.0.0", port=port)
             
             # Démarrer le serveur dans un thread
@@ -287,14 +293,23 @@ class LanVoiceGUI:
                     self.play_button.config(text="🔇 Couper son")
             else:
                 self.server = None
-                logger.error(f"Impossible de démarrer le serveur sur le port {port}")
-            messagebox.showerror("Erreur", "Impossible de démarrer le serveur")
+                error_msg = f"Impossible de démarrer le serveur sur le port {port}"
+                logger.error(error_msg)
+                logger.error("Causes possibles: port déjà utilisé, permissions insuffisantes, adresse non valide")
+                detailed_msg = f"Erreur lors du démarrage du serveur sur le port {port}.\n\nCauses possibles:\n• Port déjà utilisé par une autre application\n• Permissions insuffisantes\n• Adresse IP non valide\n• Pare-feu bloquant la connexion"
+                messagebox.showerror("Erreur de démarrage du serveur", detailed_msg)
                 
-        except ValueError:
-            messagebox.showerror("Erreur", "Le port doit être un nombre")
+        except ValueError as e:
+            error_msg = f"Le port doit être un nombre valide (1-65535). Valeur reçue: {self.server_port.get()}"
+            logger.error(error_msg)
+            messagebox.showerror("Erreur de port", error_msg)
         except Exception as e:
+            error_msg = f"Erreur inattendue lors du démarrage du serveur: {type(e).__name__}: {str(e)}"
             self.log(f"Erreur serveur: {e}")
-            messagebox.showerror("Erreur", f"Erreur démarrage serveur: {e}")
+            logger.error(error_msg)
+            logger.error(f"Port: {port}, Thread: {threading.current_thread().name}")
+            detailed_msg = f"Une erreur inattendue s'est produite:\n\nType: {type(e).__name__}\nMessage: {str(e)}\n\nVérifiez les logs pour plus de détails."
+            messagebox.showerror("Erreur critique du serveur", detailed_msg)
             self.server = None
     
     def stop_server(self):
@@ -339,15 +354,39 @@ class LanVoiceGUI:
                     self.play_button.config(text="🔇 Couper son")
                 
                 self.log(f"Connecté au serveur {host}:{port}")
+                logger.info(f"✅ Connexion client réussie vers {host}:{port}")
             else:
-                messagebox.showerror("Erreur", "Impossible de se connecter au serveur")
+                error_msg = f"Impossible de se connecter au serveur {host}:{port}"
+                logger.error(error_msg)
+                logger.error("Causes possibles: serveur indisponible, port fermé, réseau inaccessible")
+                detailed_msg = f"Connexion échouée vers {host}:{port}\n\nCauses possibles:\n• Serveur non démarré ou indisponible\n• Port fermé ou filtré par un pare-feu\n• Adresse IP incorrecte ou inaccessible\n• Problème réseau (LAN/WiFi)\n• Serveur saturé (trop de connexions)"
+                messagebox.showerror("Erreur de connexion", detailed_msg)
                 self.client = None
                 
-        except ValueError:
-            messagebox.showerror("Erreur", "Le port doit être un nombre")
+        except ValueError as e:
+            error_msg = f"Le port doit être un nombre valide (1-65535). Valeur reçue: {self.server_port.get()}"
+            logger.error(error_msg)
+            messagebox.showerror("Erreur de port", error_msg)
+        except ConnectionRefusedError as e:
+            error_msg = f"Connexion refusée par {host}:{port} - Le serveur refuse les connexions"
+            logger.error(error_msg)
+            detailed_msg = f"Le serveur {host}:{port} refuse les connexions.\n\nCauses possibles:\n• Serveur non démarré\n• Port incorrect\n• Pare-feu bloquant les connexions"
+            messagebox.showerror("Connexion refusée", detailed_msg)
+        except socket.timeout as e:
+            error_msg = f"Timeout de connexion vers {host}:{port}"
+            logger.error(error_msg)
+            messagebox.showerror("Timeout de connexion", f"Impossible de joindre le serveur {host}:{port}\n\nLe serveur met trop de temps à répondre.")
+        except socket.gaierror as e:
+            error_msg = f"Erreur de résolution d'adresse: {host} - {e}"
+            logger.error(error_msg)
+            messagebox.showerror("Adresse introuvable", f"Impossible de résoudre l'adresse: {host}\n\nVérifiez que l'adresse IP ou le nom d'hôte est correct.")
         except Exception as e:
+            error_msg = f"Erreur inattendue de connexion: {type(e).__name__}: {str(e)}"
             self.log(f"Erreur connexion: {e}")
-            messagebox.showerror("Erreur", f"Erreur de connexion: {e}")
+            logger.error(error_msg)
+            logger.error(f"Host: {host}, Port: {port}")
+            detailed_msg = f"Erreur inattendue lors de la connexion:\n\nType: {type(e).__name__}\nMessage: {str(e)}\n\nVérifiez les logs pour plus de détails."
+            messagebox.showerror("Erreur critique de connexion", detailed_msg)
     
     def disconnect_client(self):
         """Déconnecte le client"""

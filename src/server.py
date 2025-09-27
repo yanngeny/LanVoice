@@ -31,13 +31,27 @@ class VoiceServer:
     def start(self):
         """Démarre le serveur"""
         try:
+            logger.info(f"Tentative de démarrage du serveur sur {self.host}:{self.port}")
+            
+            # Créer le socket
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            logger.debug("Socket créé avec succès")
+            
+            # Configuration du socket
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            logger.debug("Option SO_REUSEADDR activée")
+            
+            # Liaison à l'adresse et au port
             self.socket.bind((self.host, self.port))
+            logger.debug(f"Socket lié à {self.host}:{self.port}")
+            
+            # Écoute des connexions
             self.socket.listen(10)
+            logger.debug("Socket en mode écoute (backlog: 10)")
+            
             self.running = True
             
-            logger.info(f"Serveur vocal démarré sur {self.host}:{self.port}")
+            logger.info(f"✅ Serveur vocal démarré avec succès sur {self.host}:{self.port}")
             logger.info("En attente de connexions...")
             logger.debug(f"Socket configuré avec SO_REUSEADDR, listen(10)")
             
@@ -55,13 +69,35 @@ class VoiceServer:
                     )
                     client_thread.start()
                     
-                except OSError:
+                except OSError as e:
                     if self.running:
-                        logger.error("Erreur lors de l'acceptation de connexion")
+                        logger.error(f"Erreur lors de l'acceptation de connexion: {type(e).__name__}: {e}")
+                        logger.debug(f"Errno: {getattr(e, 'errno', 'N/A')}, Winerror: {getattr(e, 'winerror', 'N/A')}")
                     break
                     
+        except socket.error as e:
+            logger.error(f"❌ Erreur socket lors du démarrage du serveur: {type(e).__name__}: {e}")
+            logger.error(f"Errno: {getattr(e, 'errno', 'N/A')}, Winerror: {getattr(e, 'winerror', 'N/A')}")
+            if e.errno == 10048:  # Windows: Address already in use
+                logger.error(f"Le port {self.port} est déjà utilisé par une autre application")
+            elif e.errno == 10013:  # Windows: Permission denied
+                logger.error(f"Permissions insuffisantes pour utiliser le port {self.port}")
+            raise  # Re-lever l'exception pour que GUI puisse la capturer
+        except PermissionError as e:
+            logger.error(f"❌ Permissions insuffisantes: {e}")
+            logger.error(f"Impossible de se lier au port {self.port} - Essayez un port > 1024")
+            raise
+        except OSError as e:
+            logger.error(f"❌ Erreur système lors du démarrage: {type(e).__name__}: {e}")
+            logger.error(f"Host: {self.host}, Port: {self.port}")
+            logger.error(f"Errno: {getattr(e, 'errno', 'N/A')}, Winerror: {getattr(e, 'winerror', 'N/A')}")
+            raise
         except Exception as e:
-            logger.error(f"Erreur du serveur: {e}")
+            logger.error(f"❌ Erreur inattendue du serveur: {type(e).__name__}: {e}")
+            logger.error(f"Host: {self.host}, Port: {self.port}, Running: {self.running}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            raise
         finally:
             self.stop()
     
