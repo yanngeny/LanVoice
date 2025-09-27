@@ -25,8 +25,8 @@ except ImportError:
 # Ajouter le dossier src au path pour les imports
 sys.path.append(os.path.join(os.path.dirname(__file__)))
 
-from server import VoiceServer
-from client import VoiceClient
+from src.server import VoiceServer
+from src.client import VoiceClient
 
 class LanVoiceGUI:
     def __init__(self):

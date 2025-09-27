@@ -10,7 +10,7 @@ from typing import Dict, Set
 
 # Utiliser le système de logging centralisé
 try:
-    from logger import get_logger
+    from src.logger import get_logger
     logger = get_logger('Server')
 except ImportError:
     import logging
