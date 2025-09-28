@@ -1,5 +1,6 @@
 """
 Client vocal LAN - Se connecte au serveur, capture le micro et joue l'audio reçu
+PHASE 1: Optimisations callback mode pour latence sub-milliseconde
 """
 
 import socket
@@ -27,6 +28,15 @@ try:
     from src.config_manager import get_config_manager
 except ImportError:
     get_config_manager = None
+
+# Import des optimisations PHASE 1
+try:
+    from src.audio_config import AudioOptimizer, UltraMinimalCallback, LockFreeRingBuffer, AudioConfig
+except ImportError:
+    AudioOptimizer = None
+    UltraMinimalCallback = None
+    LockFreeRingBuffer = None
+    AudioConfig = None
 
 class VoiceClient:
     def __init__(self, 
@@ -85,9 +95,38 @@ class VoiceClient:
         self.config_manager = get_config_manager() if get_config_manager else None
         self._apply_user_config()
         
+        # PHASE 1: Optimisations ultra-minimales
+        self.ultra_minimal_mode = False
+        self.callback_system = None  # Système de callbacks optimisé
+        self.ring_buffers = {
+            'input': None,
+            'output': None,
+            'network_send': None,
+            'network_receive': None
+        }
+        
+        # Détection du profil ULTRA_MINIMAL
+        if hasattr(AudioConfig, 'ULTRA_MINIMAL_LATENCY') and \
+           self.audio_config.get('DESCRIPTION', '').startswith('Latence sub-milliseconde'):
+            self.ultra_minimal_mode = True
+            logger.info("🚀 PHASE 1: Mode ultra-minimal activé")
+            
+            # Initialiser les buffers circulaires
+            buffer_size = self.CHUNK * 64  # 64 chunks de buffer
+            self.ring_buffers['input'] = LockFreeRingBuffer(buffer_size * 2) if LockFreeRingBuffer else None
+            self.ring_buffers['output'] = LockFreeRingBuffer(buffer_size * 2) if LockFreeRingBuffer else None
+            self.ring_buffers['network_send'] = LockFreeRingBuffer(buffer_size * 4) if LockFreeRingBuffer else None
+            self.ring_buffers['network_receive'] = LockFreeRingBuffer(buffer_size * 4) if LockFreeRingBuffer else None
+            
+            # Système de callbacks
+            if UltraMinimalCallback:
+                self.callback_system = UltraMinimalCallback(self.CHUNK, self.RATE)
+        
         logger.info(f"Client initialisé - Host: {host}, Port: {port}")
         logger.info(f"🎵 Configuration audio optimisée:")
         logger.info(f"   • Profil: {self.audio_config.get('DESCRIPTION', 'Personnalisé')}")
+        if self.ultra_minimal_mode:
+            logger.info(f"   🚀 Mode ULTRA-MINIMAL: Latence cible ~{(self.CHUNK/self.RATE)*1000:.1f}ms")
         logger.info(f"   • Latence théorique: ~{self._calculate_latency_ms():.1f}ms")
         logger.info(f"   • Chunk: {self.CHUNK} samples")
         logger.info(f"   • Sample Rate: {self.RATE} Hz")
@@ -288,38 +327,64 @@ class VoiceClient:
         self._update_status("Déconnecté")
     
     def start_recording(self) -> bool:
-        """Démarre l'enregistrement du microphone"""
+        """Démarre l'enregistrement du microphone avec optimisations PHASE 1"""
         if not self.connected or self.recording:
             return False
         
         try:
-            # Créer le stream d'entrée
+            # PHASE 1: Optimisations temps-réel avant création stream
+            if self.ultra_minimal_mode and AudioOptimizer:
+                logger.info("🚀 PHASE 1: Application optimisations temps-réel...")
+                AudioOptimizer.apply_ultra_minimal_optimizations()
+            
             # Optimisation du thread avant création stream
             self._optimize_audio_thread()
             
-            # Configuration stream optimisée pour latence
-            self.input_stream = self.audio.open(
-                format=self.FORMAT,
-                channels=self.CHANNELS,
-                rate=self.RATE,
-                input=True,
-                frames_per_buffer=self.CHUNK,
-                input_device_index=None,  # Device par défaut
-                start=False  # Démarrage manuel pour synchronisation
-            )
+            # PHASE 1: Mode callback pour latence minimale
+            if self.ultra_minimal_mode and self.callback_system:
+                logger.info("🎯 PHASE 1: Activation mode callback ultra-rapide")
+                
+                # Stream d'entrée en mode callback
+                self.input_stream = self.audio.open(
+                    format=self.FORMAT,
+                    channels=self.CHANNELS,
+                    rate=self.RATE,
+                    input=True,
+                    frames_per_buffer=self.CHUNK,
+                    input_device_index=None,
+                    stream_callback=self.callback_system.input_callback,
+                    start=False
+                )
+                
+                # Thread de traitement des données depuis ring buffer
+                self.send_thread = threading.Thread(target=self._send_audio_callback_mode, daemon=True)
+                
+            else:
+                # Mode polling standard (compatibilité)
+                self.input_stream = self.audio.open(
+                    format=self.FORMAT,
+                    channels=self.CHANNELS,
+                    rate=self.RATE,
+                    input=True,
+                    frames_per_buffer=self.CHUNK,
+                    input_device_index=None,
+                    start=False
+                )
+                
+                # Thread de traitement standard
+                self.send_thread = threading.Thread(target=self._send_audio, daemon=True)
             
-            logger.debug(f"🎤 Stream d'entrée optimisé créé - Latence: ~{self._calculate_latency_ms():.1f}ms")
-            self.input_stream.start_stream()  # Démarrage synchronisé
+            latency_ms = self._calculate_latency_ms()
+            logger.debug(f"🎤 Stream d'entrée créé - Latence théorique: ~{latency_ms:.1f}ms")
             
+            # Démarrage synchronisé
+            self.input_stream.start_stream()
             self.recording = True
-            
-            # Démarrer le thread d'envoi
-            self.send_thread = threading.Thread(target=self._send_audio, daemon=True)
             self.send_thread.start()
             
-            logger.info("Enregistrement démarré")
-            logger.debug(f"Stream d'entrée créé - Format: {self.FORMAT}, Channels: {self.CHANNELS}, Rate: {self.RATE}")
-            self._update_status("Enregistrement actif")
+            mode_info = "Mode CALLBACK ultra-rapide" if self.ultra_minimal_mode else "Mode polling standard"
+            logger.info(f"Enregistrement démarré - {mode_info}")
+            self._update_status(f"Enregistrement actif ({mode_info})")
             return True
             
         except Exception as e:
@@ -457,6 +522,92 @@ class VoiceClient:
             logger.error(f"Erreur thread envoi: {e}")
         finally:
             logger.info("Thread d'envoi terminé")
+    
+    def _send_audio_callback_mode(self):
+        """PHASE 1: Thread optimisé pour mode callback ultra-rapide"""
+        try:
+            logger.info("🚀 PHASE 1: Thread callback ultra-rapide démarré")
+            
+            while self.recording and self.connected:
+                if self.callback_system and self.ring_buffers['input']:
+                    # Lire les données du ring buffer (non-bloquant)
+                    audio_data = self.ring_buffers['input'].read(self.CHUNK * 2)  # 2 bytes per sample
+                    
+                    if len(audio_data) >= self.CHUNK * 2:
+                        # Calculer le niveau audio
+                        self.audio_level = self.calculate_rms_level(bytes(audio_data))
+                        
+                        # Callbacks niveau et VOX (optimisés)
+                        self._update_audio_callbacks()
+                        
+                        # Vérifier transmission
+                        if self.should_transmit_audio() and self.socket:
+                            # Compression ultra-rapide (mode callback = priorité latence)
+                            if self.use_compression:
+                                try:
+                                    import lz4.frame
+                                    # LZ4 est 10x plus rapide que zlib
+                                    compressed_data = lz4.frame.compress(bytes(audio_data), compression_level=1)
+                                    compression_flag = b'\x02'  # Flag LZ4
+                                except ImportError:
+                                    # Fallback zlib niveau 1 (rapide)
+                                    compressed_data = zlib.compress(bytes(audio_data), level=1)
+                                    compression_flag = b'\x01'  # Flag zlib
+                            else:
+                                compressed_data = bytes(audio_data)
+                                compression_flag = b'\x00'  # Pas de compression
+                            
+                            # Envoi ultra-rapide avec buffer réseau
+                            if self.ring_buffers['network_send']:
+                                # Préparer paquet complet
+                                size_data = struct.pack('!I', len(compressed_data))
+                                packet = compression_flag + size_data + compressed_data
+                                
+                                # Ajouter au ring buffer réseau (non-bloquant)
+                                if not self.ring_buffers['network_send'].write(packet):
+                                    logger.debug("⚠️ Ring buffer réseau plein, paquet ignoré")
+                            else:
+                                # Envoi direct (fallback)
+                                size_data = struct.pack('!I', len(compressed_data))
+                                self.socket.sendall(compression_flag + size_data + compressed_data)
+                    
+                    # Statistiques temps-réel
+                    if hasattr(self, '_callback_stats_count'):
+                        self._callback_stats_count += 1
+                    else:
+                        self._callback_stats_count = 1
+                    
+                    if self._callback_stats_count % 1000 == 0:  # Stats toutes les 1000 itérations
+                        if self.callback_system:
+                            stats = self.callback_system.get_performance_stats()
+                            logger.debug(f"🎯 PHASE 1 Stats: {stats['callbacks']} callbacks, "
+                                       f"{stats['underruns']} underruns, {stats['overruns']} overruns")
+                else:
+                    # Attente ultra-courte pour éviter busy-wait
+                    time.sleep(0.0001)  # 0.1ms
+                    
+        except Exception as e:
+            logger.error(f"🚀 PHASE 1: Erreur thread callback: {e}")
+        finally:
+            logger.info("🚀 PHASE 1: Thread callback ultra-rapide terminé")
+    
+    def _update_audio_callbacks(self):
+        """Optimise les callbacks niveau et VOX pour mode ultra-rapide"""
+        try:
+            # Callback niveau (optimisé)
+            if self.level_callback:
+                self.level_callback(self.audio_level)
+            
+            # Callback VOX (optimisé)
+            if self.vox_enabled:
+                new_vox_state = self.audio_level > self.threshold
+                if new_vox_state != self.vox_active:
+                    self.vox_active = new_vox_state
+                    if self.vox_callback:
+                        self.vox_callback(new_vox_state)
+        except Exception as e:
+            # Log minimal pour éviter impact performance
+            pass
     
     def _receive_audio(self):
         """Thread qui reçoit l'audio du serveur"""

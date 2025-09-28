@@ -1,4 +1,4 @@
-# Dépendances pour LanVoice
+# Dépendances pour LanVoice v2.0 PHASE 1
 # Installation: pip install -r requirements.txt
 
 # Audio
@@ -9,6 +9,9 @@ numpy>=1.21.0
 
 # Informations système pour le logging
 psutil>=5.8.0
+
+# PHASE 1: Compression ultra-rapide (10x plus rapide que zlib)
+lz4>=4.3.2
 
 # Interface graphique (inclus avec Python)
 # tkinter est inclus dans la distribution standard de Python

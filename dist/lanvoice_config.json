@@ -1,7 +1,7 @@
 {
-  "audio_profile": "auto",
-  "custom_sample_rate": 44100,
-  "custom_buffer_size": 1024,
+  "audio_profile": "ultra_minimal_latency",
+  "custom_sample_rate": 48000,
+  "custom_buffer_size": 128,
   "compression_enabled": true,
   "compression_level": 1,
   "vox_enabled": false,

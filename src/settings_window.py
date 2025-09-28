@@ -33,6 +33,7 @@ class SettingsWindow:
         # Profils audio disponibles
         self.audio_profiles = {
             "auto": "🤖 Détection Automatique",
+            "ultra_minimal_latency": "🚀 PHASE 1: Ultra Minimal (~0.5ms)",
             "ultra_low_latency": "⚡ Ultra Low Latency (~2.9ms)",
             "low_latency": "🚀 Low Latency (~5.8ms)", 
             "quality": "🎵 Quality (~11.6ms)",
@@ -546,6 +547,7 @@ class SettingsWindow:
             if profile_key and profile_key != "auto":
                 # Met à jour les paramètres selon le profil
                 profile_settings = {
+                    "ultra_minimal_latency": {"sample_rate": 48000, "buffer_size": 128},
                     "ultra_low_latency": {"sample_rate": 44100, "buffer_size": 512},
                     "low_latency": {"sample_rate": 44100, "buffer_size": 1024},
                     "quality": {"sample_rate": 44100, "buffer_size": 2048},
@@ -905,11 +907,11 @@ class SettingsWindow:
                     # Recommandations
                     if cpu_percent < 30 and ram_percent < 50:
                         # Système performant
-                        recommended_profile = "ultra_low_latency"
+                        recommended_profile = "ultra_minimal_latency"
                         config_text += "🚀 Système performant détecté\n"
-                        config_text += "   Profil recommandé: Ultra Low Latency\n"
+                        config_text += "   Profil recommandé: PHASE 1 Ultra Minimal\n"
                         
-                        self.vars['audio_profile'].set(self.audio_profiles["ultra_low_latency"])
+                        self.vars['audio_profile'].set(self.audio_profiles["ultra_minimal_latency"])
                         self.vars['sample_rate'].set(44100)
                         self.vars['buffer_size'].set(512)
                         self.vars['compression_enabled'].set(True)
