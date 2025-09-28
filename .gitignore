@@ -70,3 +70,4 @@ htmlcov/
 # (Garder les exécutables de demo mais pas les builds intermédiaires)
 build/
 *.spec
+dist/logs/

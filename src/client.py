@@ -9,6 +9,8 @@ import struct
 import pyaudio
 import numpy as np
 import math
+import zlib
+from collections import deque
 from typing import Optional, Callable
 
 # Utiliser le système de logging centralisé
@@ -19,6 +21,12 @@ except ImportError:
     import logging
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
+
+# Import du gestionnaire de configuration
+try:
+    from src.config_manager import get_config_manager
+except ImportError:
+    get_config_manager = None
 
 class VoiceClient:
     def __init__(self, 
@@ -33,11 +41,25 @@ class VoiceClient:
         self.playing = False
         self.status_callback = status_callback
         
-        # Configuration audio
-        self.CHUNK = 1024
-        self.FORMAT = pyaudio.paInt16
-        self.CHANNELS = 1
-        self.RATE = 44100
+        # Gestionnaire de configuration
+        self.config_manager = get_config_manager() if get_config_manager else None
+        
+        # Configuration audio depuis les paramètres utilisateur
+        self._load_audio_config()
+        
+        # Configuration VOX depuis les paramètres
+        self._load_vox_config()
+        
+        # Extraction des paramètres
+        self.CHUNK = self.audio_config['CHUNK']
+        self.FORMAT = self.audio_config['FORMAT']
+        self.CHANNELS = self.audio_config['CHANNELS']
+        self.RATE = self.audio_config['RATE']
+        self.BUFFER_SIZE = self.audio_config.get('BUFFER_SIZE', 512)
+        
+        # Optimisations supplémentaires
+        self.use_compression = True  # Compression audio
+        self.adaptive_buffer = deque(maxlen=10)  # Buffer adaptatif
         
         # PyAudio
         self.audio = None
@@ -59,14 +81,140 @@ class VoiceClient:
         self.level_callback: Optional[Callable] = None  # Callback pour mettre à jour le VU-mètre
         self.vox_callback: Optional[Callable] = None     # Callback pour l'état VOX
         
-        logger.info(f"Client initialisé - Host: {host}, Port: {port}")
-        logger.debug(f"Configuration audio - Format: {self.FORMAT}, Channels: {self.CHANNELS}, Rate: {self.RATE}, Chunk: {self.CHUNK}")
+        # Intégration gestionnaire de configuration
+        self.config_manager = get_config_manager() if get_config_manager else None
+        self._apply_user_config()
         
+        logger.info(f"Client initialisé - Host: {host}, Port: {port}")
+        logger.info(f"🎵 Configuration audio optimisée:")
+        logger.info(f"   • Profil: {self.audio_config.get('DESCRIPTION', 'Personnalisé')}")
+        logger.info(f"   • Latence théorique: ~{self._calculate_latency_ms():.1f}ms")
+        logger.info(f"   • Chunk: {self.CHUNK} samples")
+        logger.info(f"   • Sample Rate: {self.RATE} Hz")
+        logger.info(f"   • Compression: {'Activée' if self.use_compression else 'Désactivée'}")
+        logger.debug(f"Configuration détaillée - Format: {self.FORMAT}, Channels: {self.CHANNELS}, Buffer: {self.BUFFER_SIZE}")
+        
+    def _apply_user_config(self):
+        """Applique la configuration utilisateur personnalisée"""
+        try:
+            if self.config_manager:
+                # Configuration audio personnalisée
+                audio_profile = self.config_manager.get('audio_profile', 'auto')
+                
+                if audio_profile != 'auto':
+                    # Applique un profil spécifique
+                    custom_rate = self.config_manager.get('custom_sample_rate')
+                    custom_buffer = self.config_manager.get('custom_buffer_size')
+                    
+                    if custom_rate:
+                        self.RATE = custom_rate
+                        self.audio_config['RATE'] = custom_rate
+                        
+                    if custom_buffer:
+                        self.CHUNK = custom_buffer
+                        self.BUFFER_SIZE = custom_buffer
+                        self.audio_config['CHUNK'] = custom_buffer
+                        self.audio_config['BUFFER_SIZE'] = custom_buffer
+                
+                # Configuration de compression
+                self.use_compression = self.config_manager.get('compression_enabled', True)
+                
+                # Configuration VOX
+                self.vox_enabled = self.config_manager.get('vox_enabled', False)
+                vox_threshold = self.config_manager.get('vox_threshold', -30.0)
+                self.threshold = vox_threshold  # Seuil en dB
+                
+                logger.info(f"Configuration utilisateur appliquée: Profil={audio_profile}, VOX={self.vox_enabled}")
+                
+        except Exception as e:
+            logger.warning(f"Erreur application config utilisateur: {e}")
+    
+    def _load_audio_config(self):
+        """Charge la configuration audio par défaut"""
+        self.audio_config = {
+            'CHUNK': 1024,
+            'FORMAT': pyaudio.paInt16,
+            'CHANNELS': 1,
+            'RATE': 44100,
+            'BUFFER_SIZE': 1024,
+            'DESCRIPTION': 'Configuration par défaut'
+        }
+    
+    def _load_vox_config(self):
+        """Charge la configuration VOX par défaut"""
+        self.vox_enabled = False
+        self.threshold = -30.0  # Seuil en décibels (dB)
+        self.vox_active = False
+    
+    def reload_user_config(self):
+        """Recharge la configuration utilisateur"""
+        try:
+            if self.config_manager:
+                self.config_manager.load_config()
+                self._apply_user_config()
+                
+                if self.status_callback:
+                    self.status_callback("🔄 Configuration rechargée")
+                    
+                logger.info("Configuration utilisateur rechargée")
+                
+        except Exception as e:
+            logger.error(f"Erreur rechargement config: {e}")
+            if self.status_callback:
+                self.status_callback(f"⚠️ Erreur config: {e}")
+    
+    def _calculate_latency_ms(self):
+        """Calcule la latence théorique en millisecondes"""
+        return (self.CHUNK / self.RATE) * 1000
+    
+    def _optimize_audio_thread(self):
+        """Optimise le thread audio pour une latence minimale"""
+        try:
+            from src.audio_config import AudioOptimizer
+            success = AudioOptimizer.optimize_thread_priority()
+            if success:
+                logger.debug("🚀 Priorité thread audio optimisée")
+            return success
+        except Exception as e:
+            logger.debug(f"⚠️ Optimisation thread échouée: {e}")
+            return False
+    
+    def _compress_audio(self, audio_data):
+        """Compresse les données audio pour réduire la bande passante"""
+        if not self.use_compression:
+            return audio_data
+        
+        try:
+            compressed = zlib.compress(audio_data, level=1)  # Compression rapide
+            compression_ratio = len(compressed) / len(audio_data)
+            logger.debug(f"🗜️ Compression audio: {compression_ratio:.2f} ratio")
+            return compressed
+        except Exception as e:
+            logger.debug(f"⚠️ Erreur compression: {e}")
+            return audio_data
+    
+    def _decompress_audio(self, compressed_data):
+        """Décompresse les données audio"""
+        if not self.use_compression:
+            return compressed_data
+        
+        try:
+            return zlib.decompress(compressed_data)
+        except Exception as e:
+            logger.debug(f"⚠️ Erreur décompression: {e}")
+            return compressed_data
+    
     def connect(self) -> bool:
         """Se connecte au serveur"""
         try:
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket.settimeout(10)  # Timeout de 10 secondes pour la connexion
+            
+            # Optimisations socket pour faible latence
+            self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)  # Disable Nagle
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, self.BUFFER_SIZE)
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, self.BUFFER_SIZE)
+            
             self.socket.connect((self.host, self.port))
             self.socket.settimeout(1)  # Timeout plus court pour les opérations normales
             self.connected = True
@@ -146,13 +294,22 @@ class VoiceClient:
         
         try:
             # Créer le stream d'entrée
+            # Optimisation du thread avant création stream
+            self._optimize_audio_thread()
+            
+            # Configuration stream optimisée pour latence
             self.input_stream = self.audio.open(
                 format=self.FORMAT,
                 channels=self.CHANNELS,
                 rate=self.RATE,
                 input=True,
-                frames_per_buffer=self.CHUNK
+                frames_per_buffer=self.CHUNK,
+                input_device_index=None,  # Device par défaut
+                start=False  # Démarrage manuel pour synchronisation
             )
+            
+            logger.debug(f"🎤 Stream d'entrée optimisé créé - Latence: ~{self._calculate_latency_ms():.1f}ms")
+            self.input_stream.start_stream()  # Démarrage synchronisé
             
             self.recording = True
             
@@ -194,14 +351,22 @@ class VoiceClient:
             return False
         
         try:
+            # Optimisation thread pour la lecture
+            self._optimize_audio_thread()
+            
             # Créer le stream de sortie
             self.output_stream = self.audio.open(
                 format=self.FORMAT,
                 channels=self.CHANNELS,
                 rate=self.RATE,
                 output=True,
-                frames_per_buffer=self.CHUNK
+                frames_per_buffer=self.CHUNK,
+                output_device_index=None,  # Device par défaut
+                start=False  # Démarrage manuel
             )
+            
+            logger.debug(f"🔊 Stream de sortie optimisé créé - Latence: ~{self._calculate_latency_ms():.1f}ms")
+            self.output_stream.start_stream()  # Démarrage synchronisé
             
             self.playing = True
             logger.info("Lecture démarrée")
@@ -261,8 +426,25 @@ class VoiceClient:
                         
                         # Envoyer au serveur seulement si le seuil est dépassé
                         if should_send and self.socket:
-                            size_data = struct.pack('!I', len(audio_data))
-                            self.socket.sendall(size_data + audio_data)
+                            # Compression des données audio pour réduire la bande passante
+                            compressed_data = self._compress_audio(audio_data)
+                            
+                            # Envoyer avec en-tête de compression
+                            compression_flag = b'\x01' if self.use_compression else b'\x00'
+                            size_data = struct.pack('!I', len(compressed_data))
+                            self.socket.sendall(compression_flag + size_data + compressed_data)
+                            
+                            # Log statistiques occasionnelles
+                            if hasattr(self, '_send_count'):
+                                self._send_count += 1
+                            else:
+                                self._send_count = 1
+                            
+                            if self._send_count % 100 == 0:  # Log toutes les 100 transmissions
+                                original_size = len(audio_data)
+                                compressed_size = len(compressed_data)
+                                ratio = compressed_size / original_size if original_size > 0 else 1.0
+                                logger.debug(f"📊 Compression audio: {ratio:.2f} ratio, {original_size}→{compressed_size} bytes")
                             
                     except Exception as e:
                         if self.recording:
@@ -281,6 +463,13 @@ class VoiceClient:
         try:
             while self.connected:
                 try:
+                    # Recevoir le flag de compression
+                    compression_flag = self.socket.recv(1)
+                    if not compression_flag:
+                        break
+                    
+                    is_compressed = compression_flag == b'\x01'
+                    
                     # Recevoir la taille du paquet
                     size_data = self.socket.recv(4)
                     if not size_data:
@@ -298,13 +487,31 @@ class VoiceClient:
                         audio_data += chunk
                         bytes_received += len(chunk)
                     
-                    # Jouer l'audio si la lecture est active
-                    if len(audio_data) == audio_size and self.playing and self.output_stream:
-                        try:
-                            self.output_stream.write(audio_data)
-                        except Exception as e:
-                            if self.playing:
-                                logger.error(f"Erreur lecture audio: {e}")
+                    # Décompresser les données si nécessaire
+                    if len(audio_data) == audio_size:
+                        if is_compressed:
+                            audio_data = self._decompress_audio(audio_data)
+                        
+                        # Jouer l'audio si la lecture est active
+                        if self.playing and self.output_stream:
+                            try:
+                                # Buffer adaptatif pour réduire les discontinuités
+                                self.adaptive_buffer.append(audio_data)
+                                
+                                # Jouer immédiatement si buffer pas trop plein
+                                if len(self.adaptive_buffer) <= 3:  # Max 3 chunks en buffer
+                                    while self.adaptive_buffer and self.playing:
+                                        chunk_to_play = self.adaptive_buffer.popleft()
+                                        self.output_stream.write(chunk_to_play)
+                                else:
+                                    # Vider le buffer si trop plein (réduction latence)
+                                    logger.debug("🚮 Vidage buffer adaptatif (réduction latence)")
+                                    self.adaptive_buffer.clear()
+                                    self.output_stream.write(audio_data)
+                                    
+                            except Exception as e:
+                                if self.playing:
+                                    logger.error(f"Erreur lecture audio: {e}")
                     
                 except ConnectionResetError:
                     break
@@ -346,7 +553,7 @@ class VoiceClient:
         }
     
     def calculate_rms_level(self, audio_data: bytes) -> float:
-        """Calcule le niveau RMS de l'audio en pourcentage (0-100)"""
+        """Calcule le niveau RMS de l'audio en décibels (dB)"""
         try:
             # Convertir les bytes en array numpy
             audio_array = np.frombuffer(audio_data, dtype=np.int16)
@@ -354,13 +561,13 @@ class VoiceClient:
             # Calculer le RMS
             rms = np.sqrt(np.mean(audio_array.astype(np.float32) ** 2))
             
-            # Convertir en dB puis en pourcentage (0-100)
+            # Convertir en dB
             if rms > 0:
                 db = 20 * math.log10(rms / 32767.0)  # 32767 = max valeur int16
-                # Normaliser de -60dB/0dB vers 0-100%
-                level = max(0, min(100, (db + 60) * 100 / 60))
+                # Limiter la plage à -60dB minimum
+                level = max(-60.0, db)
             else:
-                level = 0
+                level = -60.0  # Silence = -60dB
             
             return level
             

@@ -6,6 +6,7 @@ import socket
 import threading
 import time
 import struct
+import zlib
 from typing import Dict, Set
 
 # Utiliser le système de logging centralisé
@@ -17,16 +18,61 @@ except ImportError:
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
 
+# Import du gestionnaire de configuration
+try:
+    from src.config_manager import get_config_manager
+except ImportError:
+    get_config_manager = None
+
 class VoiceServer:
     def __init__(self, host: str = "0.0.0.0", port: int = 12345):
         self.host = host
-        self.port = port
         self.socket = None
         self.clients: Dict[socket.socket, str] = {}  # socket -> nom_client
         self.running = False
         self.lock = threading.Lock()
         
-        logger.info(f"Serveur initialisé - Host: {host}, Port: {port}")
+        # Gestionnaire de configuration
+        self.config_manager = get_config_manager() if get_config_manager else None
+        
+        # Port depuis la configuration
+        if self.config_manager:
+            config_port = self.config_manager.get('server_port', port)
+            self.port = config_port
+        else:
+            self.port = port
+            
+        # Configuration compression depuis les paramètres
+        self.compression_enabled = True
+        self.compression_level = 1
+        self._load_server_config()
+        
+        logger.info(f"Serveur initialisé - Host: {host}, Port: {self.port}")
+        logger.info(f"Configuration: Compression={'Activée' if self.compression_enabled else 'Désactivée'}")
+    
+    def _load_server_config(self):
+        """Charge la configuration du serveur depuis le gestionnaire de configuration"""
+        if not self.config_manager:
+            logger.debug("Aucun gestionnaire de configuration disponible, utilisation des valeurs par défaut")
+            return
+            
+        try:
+            # Configuration de compression
+            self.compression_enabled = self.config_manager.get('compression_enabled', True)
+            self.compression_level = self.config_manager.get('compression_level', 1)
+            
+            # Validation du niveau de compression
+            if not (1 <= self.compression_level <= 9):
+                logger.warning(f"Niveau de compression invalide: {self.compression_level}, utilisation de 1")
+                self.compression_level = 1
+            
+            logger.debug(f"Configuration serveur chargée: compression={self.compression_enabled}, level={self.compression_level}")
+            
+        except Exception as e:
+            logger.error(f"Erreur lors du chargement de la configuration serveur: {e}")
+            # Utiliser les valeurs par défaut en cas d'erreur
+            self.compression_enabled = True
+            self.compression_level = 1
         
     def start(self):
         """Démarre le serveur"""
@@ -37,16 +83,32 @@ class VoiceServer:
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             logger.debug("Socket créé avec succès")
             
-            # Configuration du socket
+            # Configuration du socket avec optimisations
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             logger.debug("Option SO_REUSEADDR activée")
             
-            # Liaison à l'adresse et au port
-            self.socket.bind((self.host, self.port))
-            logger.debug(f"Socket lié à {self.host}:{self.port}")
+            # Optimisations TCP depuis la configuration
+            if self.config_manager and self.config_manager.get('tcp_nodelay', True):
+                self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+                logger.debug("TCP_NODELAY activé pour réduire la latence")
             
-            # Écoute des connexions
-            self.socket.listen(10)
+            # Liaison à l'adresse et au port (avec gestion d'erreur améliorée)
+            try:
+                self.socket.bind((self.host, self.port))
+                logger.debug(f"Socket lié à {self.host}:{self.port}")
+            except OSError as e:
+                if e.errno == 10048:  # Port déjà utilisé sur Windows
+                    error_msg = (f"Port {self.port} déjà utilisé. "
+                               f"Fermez l'application qui utilise ce port ou changez le port dans les paramètres.")
+                    logger.error(error_msg)
+                    raise Exception(error_msg)
+                else:
+                    raise
+            
+            # Écoute des connexions (limite configurable)
+            max_clients = self.config_manager.get('max_clients', 10) if self.config_manager else 10
+            self.socket.listen(max_clients)
+            logger.debug(f"Serveur en écoute, max {max_clients} clients")
             logger.debug("Socket en mode écoute (backlog: 10)")
             
             self.running = True
@@ -116,6 +178,13 @@ class VoiceServer:
             
             while self.running:
                 try:
+                    # Recevoir le flag de compression
+                    compression_flag = client_socket.recv(1)
+                    if not compression_flag:
+                        break
+                    
+                    is_compressed = compression_flag == b'\x01'
+                    
                     # Recevoir la taille du paquet audio
                     size_data = client_socket.recv(4)
                     if not size_data:
@@ -134,6 +203,15 @@ class VoiceServer:
                         bytes_received += len(chunk)
                     
                     if len(audio_data) == audio_size:
+                        # Décompresser si nécessaire
+                        if is_compressed:
+                            try:
+                                audio_data = zlib.decompress(audio_data)
+                                logger.debug(f"🗜️ Décompression audio de {client_name}")
+                            except Exception as e:
+                                logger.error(f"Erreur décompression {client_name}: {e}")
+                                continue
+                        
                         # Diffuser l'audio à tous les autres clients
                         self.broadcast_audio(audio_data, exclude=client_socket)
                     
@@ -166,7 +244,17 @@ class VoiceServer:
             self.broadcast_message(f"{client_name} a quitté le salon", exclude=client_socket)
     
     def broadcast_audio(self, audio_data: bytes, exclude: socket.socket = None):
-        """Diffuse l'audio à tous les clients connectés sauf celui exclu"""
+        """Diffuse l'audio à tous les clients connectés avec compression optimisée"""
+        # Pré-compression pour tous les clients (optimisation)
+        compressed_data = None
+        try:
+            compressed_data = zlib.compress(audio_data, level=1)  # Compression rapide
+            compression_ratio = len(compressed_data) / len(audio_data)
+            logger.debug(f"📦 Compression broadcast: {compression_ratio:.2f} ratio")
+        except Exception as e:
+            logger.debug(f"⚠️ Erreur compression broadcast: {e}")
+            compressed_data = audio_data
+            
         with self.lock:
             clients_to_remove = []
             for client_socket in self.clients:
@@ -174,9 +262,15 @@ class VoiceServer:
                     continue
                 
                 try:
-                    # Envoyer la taille puis les données avec gestion d'erreur
-                    size_data = struct.pack('!I', len(audio_data))
-                    client_socket.sendall(size_data + audio_data)
+                    # Utiliser les données compressées si disponibles
+                    data_to_send = compressed_data if compressed_data else audio_data
+                    is_compressed = compressed_data is not None and compressed_data != audio_data
+                    
+                    # Envoyer avec en-tête de compression
+                    compression_flag = b'\x01' if is_compressed else b'\x00'
+                    size_data = struct.pack('!I', len(data_to_send))
+                    client_socket.sendall(compression_flag + size_data + data_to_send)
+                    
                 except (ConnectionResetError, BrokenPipeError):
                     # Connexion fermée par le client
                     clients_to_remove.append(client_socket)

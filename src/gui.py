@@ -25,15 +25,29 @@ except ImportError:
 # Ajouter le dossier src au path pour les imports
 sys.path.append(os.path.join(os.path.dirname(__file__)))
 
-from src.server import VoiceServer
-from src.client import VoiceClient
+# Imports compatibles avec PyInstaller
+try:
+    from src.server import VoiceServer
+    from src.client import VoiceClient
+    from src.config_manager import get_config_manager
+    from src.settings_window import show_settings
+except ImportError:
+    # Si on est dans un exécutable PyInstaller
+    from server import VoiceServer
+    from client import VoiceClient
+    from config_manager import get_config_manager
+    from settings_window import show_settings
 
 class LanVoiceGUI:
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("LanVoice - Chat Vocal LAN")
-        self.root.geometry("600x500")
+        self.root.title("LanVoice v2.0 - Chat Vocal LAN Optimisé")
+        self.root.geometry("650x550")
         self.root.resizable(True, True)
+        
+        # Gestionnaire de configuration
+        self.config_manager = get_config_manager()
+        self.settings_window = None
         
         # Variables
         self.server = None
@@ -41,16 +55,27 @@ class LanVoiceGUI:
         self.server_thread = None
         self.mode = tk.StringVar(value="client")
         self.server_ip = tk.StringVar(value="127.0.0.1")
-        self.server_port = tk.StringVar(value="12345")
+        self.server_port = tk.StringVar(value=str(self.config_manager.get("server_port", 12345)))
         self.is_recording = tk.BooleanVar(value=False)
         self.is_playing = tk.BooleanVar(value=True)
-        self.vox_enabled = tk.BooleanVar(value=False)
-        self.threshold_value = tk.DoubleVar(value=10.0)
+        self.vox_enabled = tk.BooleanVar(value=self.config_manager.get("vox_enabled", False))
+        self.threshold_value = tk.DoubleVar(value=self.config_manager.get("vox_threshold", -30.0))
         self.audio_level = tk.DoubleVar(value=0.0)
+        
+        # Variables d'affichage
+        self.current_profile = tk.StringVar(value=self.get_profile_display())
+        self.performance_metrics = tk.BooleanVar(value=self.config_manager.get("show_performance_metrics", False))
         
         logger.info("Initialisation de l'interface graphique")
         self.setup_ui()
         self.setup_styles()
+        
+        # Chargement de la configuration
+        self.load_config_settings()
+        
+        # Diagnostic automatique si activé
+        if self.config_manager.get("auto_diagnostic", True):
+            self.schedule_auto_diagnostic()
         
         # Gestion de la fermeture
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -94,9 +119,33 @@ class LanVoiceGUI:
         self.root.rowconfigure(0, weight=1)
         main_frame.columnconfigure(1, weight=1)
         
-        # Titre
-        title_label = ttk.Label(main_frame, text="🎤 LanVoice", style='Title.TLabel')
-        title_label.grid(row=0, column=0, columnspan=3, pady=(0, 20))
+        # En-tête avec titre et bouton paramètres
+        header_frame = ttk.Frame(main_frame)
+        header_frame.grid(row=0, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 20))
+        header_frame.columnconfigure(1, weight=1)
+        
+        title_label = ttk.Label(header_frame, text="🎤 LanVoice v2.0", style='Title.TLabel')
+        title_label.grid(row=0, column=0, sticky=tk.W)
+        
+        # Bouton paramètres avec icône engrenage
+        settings_button = ttk.Button(header_frame, text="⚙️", width=4,
+                                   command=self.open_settings,
+                                   style='Action.TButton')
+        settings_button.grid(row=0, column=2, sticky=tk.E)
+        
+        # Informations de profil audio
+        profile_frame = ttk.Frame(header_frame)
+        profile_frame.grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(5, 0))
+        
+        ttk.Label(profile_frame, text="📊 Profil:", font=('Arial', 9)).grid(row=0, column=0, sticky=tk.W)
+        self.profile_label = ttk.Label(profile_frame, textvariable=self.current_profile, 
+                                     font=('Arial', 9, 'bold'), foreground='blue')
+        self.profile_label.grid(row=0, column=1, sticky=tk.W, padx=(5, 0))
+        
+        # Bouton diagnostic rapide
+        diag_button = ttk.Button(profile_frame, text="🔍 Diagnostic", 
+                               command=self.quick_diagnostic)
+        diag_button.grid(row=0, column=2, sticky=tk.E)
         
         # Sélection du mode
         mode_frame = ttk.LabelFrame(main_frame, text="Mode", padding="10")
@@ -142,46 +191,9 @@ class LanVoiceGUI:
                                      state='disabled')
         self.play_button.grid(row=0, column=2)
         
-        # VU-mètre et contrôles audio
-        audio_frame = ttk.LabelFrame(main_frame, text="Audio", padding="10")
-        audio_frame.grid(row=4, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=10)
-        audio_frame.columnconfigure(1, weight=1)
-        
-        # VU-mètre
-        ttk.Label(audio_frame, text="Niveau:").grid(row=0, column=0, sticky=tk.W, padx=(0, 10))
-        self.vu_meter = ttk.Progressbar(audio_frame, variable=self.audio_level, maximum=100)
-        self.vu_meter.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(0, 10))
-        self.level_label = ttk.Label(audio_frame, text="0%")
-        self.level_label.grid(row=0, column=2, sticky=tk.W)
-        
-        # Contrôles VOX
-        ttk.Separator(audio_frame, orient='horizontal').grid(row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=10)
-        
-        self.vox_check = ttk.Checkbutton(audio_frame, text="Mode VOX (activation vocale)", 
-                                        variable=self.vox_enabled, command=self.on_vox_toggle)
-        self.vox_check.grid(row=2, column=0, columnspan=3, sticky=tk.W, pady=(0, 10))
-        
-        # Seuil
-        threshold_frame = ttk.Frame(audio_frame)
-        threshold_frame.grid(row=3, column=0, columnspan=3, sticky=(tk.W, tk.E))
-        threshold_frame.columnconfigure(1, weight=1)
-        
-        ttk.Label(threshold_frame, text="Seuil:").grid(row=0, column=0, sticky=tk.W, padx=(0, 10))
-        self.threshold_scale = ttk.Scale(threshold_frame, from_=0, to=50, 
-                                        variable=self.threshold_value, orient='horizontal',
-                                        command=self.on_threshold_change)
-        self.threshold_scale.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(0, 10))
-        self.threshold_label = ttk.Label(threshold_frame, text="10%")
-        self.threshold_label.grid(row=0, column=2, sticky=tk.W)
-        
-        # Indicateur VOX
-        self.vox_indicator = ttk.Label(audio_frame, text="🔇 VOX Inactif", 
-                                      foreground="gray")
-        self.vox_indicator.grid(row=4, column=0, columnspan=3, pady=(10, 0))
-        
         # Statut
         status_frame = ttk.LabelFrame(main_frame, text="Statut", padding="10")
-        status_frame.grid(row=5, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(10, 0))
+        status_frame.grid(row=4, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(10, 0))
         status_frame.columnconfigure(0, weight=1)
         
         self.status_label = ttk.Label(status_frame, text="Prêt à se connecter", 
@@ -190,10 +202,10 @@ class LanVoiceGUI:
         
         # Log
         log_frame = ttk.LabelFrame(main_frame, text="Journal", padding="10")
-        log_frame.grid(row=6, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(10, 0))
+        log_frame.grid(row=5, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(10, 0))
         log_frame.columnconfigure(0, weight=1)
         log_frame.rowconfigure(0, weight=1)
-        main_frame.rowconfigure(6, weight=1)
+        main_frame.rowconfigure(5, weight=1)
         
         self.log_text = scrolledtext.ScrolledText(log_frame, height=10, state='disabled')
         self.log_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
@@ -460,7 +472,9 @@ class LanVoiceGUI:
     
     def update_vu_meter(self, level):
         """Met à jour le VU-mètre"""
-        self.audio_level.set(level)
+        # Convertir dB vers pourcentage pour l'affichage de la barre
+        display_level = max(0, min(100, (level + 60) * 100 / 60))  # -60dB à 0dB -> 0 à 100%
+        self.audio_level.set(display_level)
         self.level_label.config(text=f"{level:.0f}%") 
         
         # Changer la couleur selon le niveau
@@ -495,7 +509,7 @@ class LanVoiceGUI:
     def on_threshold_change(self, value):
         """Gestionnaire pour le changement de seuil"""
         threshold = float(value)
-        self.threshold_label.config(text=f"{threshold:.0f}%")
+        self.threshold_label.config(text=f"{threshold:.0f} dB")
         
         if self.client:
             self.client.set_threshold(threshold)
@@ -513,9 +527,270 @@ class LanVoiceGUI:
         self.log_text.see(tk.END)
         self.log_text.config(state='disabled')
     
+    def get_profile_display(self):
+        """Obtient l'affichage du profil audio actuel"""
+        profile = self.config_manager.get("audio_profile", "auto")
+        profile_names = {
+            "auto": "🤖 Auto",
+            "ultra_low_latency": "⚡ Ultra Low (~2.9ms)",
+            "low_latency": "🚀 Low (~5.8ms)",
+            "quality": "🎵 Quality (~11.6ms)",
+            "bandwidth_saving": "💾 Bandwidth (~23.2ms)"
+        }
+        return profile_names.get(profile, "🤖 Auto")
+    
+    def load_config_settings(self):
+        """Charge les paramètres depuis la configuration"""
+        try:
+            # Met à jour les variables depuis la configuration
+            self.server_port.set(str(self.config_manager.get("server_port", 12345)))
+            self.vox_enabled.set(self.config_manager.get("vox_enabled", False))
+            self.threshold_value.set(self.config_manager.get("vox_threshold", -30.0))
+            
+            # Met à jour l'affichage du profil
+            self.current_profile.set(self.get_profile_display())
+            
+            logger.info("Paramètres chargés depuis la configuration")
+            
+        except Exception as e:
+            logger.error(f"Erreur lors du chargement de la configuration: {e}")
+            self.log(f"⚠️ Erreur configuration: {e}")
+    
+    def save_current_settings(self):
+        """Sauvegarde les paramètres actuels"""
+        try:
+            updates = {
+                "server_port": int(self.server_port.get()),
+                "vox_enabled": self.vox_enabled.get(),
+                "vox_threshold": self.threshold_value.get()
+            }
+            
+            self.config_manager.update_multiple(updates, save_immediately=True)
+            logger.info("Paramètres sauvegardés")
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la sauvegarde: {e}")
+    
+    def open_settings(self):
+        """Ouvre la fenêtre des paramètres avancés"""
+        try:
+            # Sauvegarde les paramètres actuels avant d'ouvrir
+            self.save_current_settings()
+            
+            # Ouvre la fenêtre des paramètres
+            self.settings_window = show_settings(self.root, self.config_manager)
+            
+            # Programme une vérification périodique pour les changements
+            self.check_config_changes()
+            
+            self.log("⚙️ Paramètres avancés ouverts")
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de l'ouverture des paramètres: {e}")
+            messagebox.showerror("Erreur", f"Impossible d'ouvrir les paramètres: {e}")
+    
+    def check_config_changes(self):
+        """Vérifie les changements de configuration et met à jour l'interface"""
+        try:
+            # Met à jour l'affichage du profil
+            new_profile = self.get_profile_display()
+            if new_profile != self.current_profile.get():
+                self.current_profile.set(new_profile)
+                self.log(f"📊 Profil mis à jour: {new_profile}")
+            
+            # Met à jour les autres paramètres si nécessaire
+            new_port = str(self.config_manager.get("server_port", 12345))
+            if new_port != self.server_port.get():
+                self.server_port.set(new_port)
+            
+            new_vox = self.config_manager.get("vox_enabled", False)
+            if new_vox != self.vox_enabled.get():
+                self.vox_enabled.set(new_vox)
+            
+            new_threshold = self.config_manager.get("vox_threshold", -30.0)
+            if abs(new_threshold - self.threshold_value.get()) > 0.1:
+                self.threshold_value.set(new_threshold)
+            
+            # Reprogramme la vérification si la fenêtre des paramètres est encore ouverte
+            if (self.settings_window and 
+                hasattr(self.settings_window, 'window') and 
+                self.settings_window.window and 
+                self.settings_window.window.winfo_exists()):
+                self.root.after(1000, self.check_config_changes)
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la vérification des changements: {e}")
+    
+    def quick_diagnostic(self):
+        """Lance un diagnostic rapide intégré"""
+        try:
+            self.log("🔍 Diagnostic rapide en cours...")
+            
+            def run_integrated_diagnostic():
+                try:
+                    import pyaudio
+                    import psutil
+                    
+                    # Test audio détaillé
+                    p = pyaudio.PyAudio()
+                    device_count = p.get_device_count()
+                    
+                    input_devices = 0
+                    output_devices = 0
+                    for i in range(device_count):
+                        info = p.get_device_info_by_index(i)
+                        if info['maxInputChannels'] > 0:
+                            input_devices += 1
+                        if info['maxOutputChannels'] > 0:
+                            output_devices += 1
+                    
+                    p.terminate()
+                    
+                    # Test système
+                    cpu_percent = psutil.cpu_percent(interval=0.5)
+                    ram_percent = psutil.virtual_memory().percent
+                    
+                    # Diagnostic complet avec détails
+                    import platform
+                    import socket
+                    
+                    # Informations système détaillées
+                    system_info = platform.system()
+                    cpu_count = psutil.cpu_count()
+                    ram_total = psutil.virtual_memory().total / (1024**3)  # GB
+                    ram_available = psutil.virtual_memory().available / (1024**3)  # GB
+                    
+                    # Test réseau local
+                    try:
+                        hostname = socket.gethostname()
+                        local_ip = socket.gethostbyname(hostname)
+                    except:
+                        hostname = "Inconnu"
+                        local_ip = "127.0.0.1"
+                    
+                    # Évaluation performances
+                    if cpu_percent < 20 and ram_percent < 50:
+                        perf_status = "🏆 EXCELLENTES"
+                        recommended_profile = "⚡ Ultra Low Latency (~2.9ms)"
+                        perf_color = "🟢"
+                    elif cpu_percent < 40 and ram_percent < 70:
+                        perf_status = "👍 BONNES"
+                        recommended_profile = "🚀 Low Latency (~5.8ms)"
+                        perf_color = "🟡"
+                    else:
+                        perf_status = "⚠️ LIMITÉES"
+                        recommended_profile = "🎵 Quality (~23ms)"
+                        perf_color = "🔴"
+                    
+                    # Messages du rapport complet
+                    messages = [
+                        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+                        "📋 RAPPORT DE DIAGNOSTIC LANVOICE COMPLET",
+                        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+                        "",
+                        "�️ INFORMATIONS SYSTÈME:",
+                        f"   OS: {system_info}",
+                        f"   Hostname: {hostname}",
+                        f"   IP locale: {local_ip}",
+                        f"   CPU: {cpu_count} coeurs - Utilisation: {cpu_percent:.1f}%",
+                        f"   RAM: {ram_available:.1f}GB libre / {ram_total:.1f}GB total ({ram_percent:.1f}%)",
+                        "",
+                        "🎵 PÉRIPHÉRIQUES AUDIO:",
+                        f"   Périphériques totaux: {device_count}",
+                        f"   🎤 Entrées (microphones): {input_devices}",
+                        f"   🔊 Sorties (haut-parleurs): {output_devices}",
+                        "",
+                        "⚡ ÉVALUATION PERFORMANCES:",
+                        f"   Statut global: {perf_status}",
+                        f"   {perf_color} CPU Load: {'Faible' if cpu_percent < 30 else 'Modérée' if cpu_percent < 60 else 'Élevée'}",
+                        f"   {perf_color} RAM Usage: {'Faible' if ram_percent < 50 else 'Modérée' if ram_percent < 75 else 'Élevée'}",
+                        "",
+                        "🎯 RECOMMANDATIONS:",
+                        f"   Profil optimal: {recommended_profile}",
+                        f"   Latence estimée: {'< 5ms' if cpu_percent < 20 else '5-15ms' if cpu_percent < 40 else '> 15ms'}",
+                        f"   Qualité recommandée: {'Maximum' if cpu_percent < 30 else 'Élevée' if cpu_percent < 60 else 'Standard'}",
+                        "",
+                        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+                        "✅ Diagnostic terminé - Système prêt pour LanVoice",
+                        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                    ]
+                    
+                    # Envoyer tous les messages via after() avec un délai plus court
+                    for i, message in enumerate(messages):
+                        self.root.after(i * 50, lambda msg=message: self.log(msg))
+                    
+                except Exception as e:
+                    self.root.after(0, lambda: self.log(f"⚠️ Erreur diagnostic: {str(e)}"))
+            
+            # Lance le diagnostic dans un thread séparé
+            threading.Thread(target=run_integrated_diagnostic, daemon=True).start()
+            
+        except Exception as e:
+            logger.error(f"Erreur lors du lancement du diagnostic: {e}")
+            self.log(f"⚠️ Erreur diagnostic: {e}")
+    
+    def schedule_auto_diagnostic(self):
+        """Programme un diagnostic automatique au démarrage"""
+        try:
+            # Lance le diagnostic automatique après 2 secondes
+            self.root.after(2000, self.auto_diagnostic)
+        except Exception as e:
+            logger.error(f"Erreur lors de la programmation du diagnostic: {e}")
+    
+    def auto_diagnostic(self):
+        """Exécute un diagnostic automatique au démarrage"""
+        try:
+            self.log("🤖 Diagnostic automatique...")
+            
+            # Version simplifiée du diagnostic pour le démarrage
+            def simple_diagnostic():
+                try:
+                    import pyaudio
+                    import psutil
+                    
+                    # Vérification rapide PyAudio
+                    p = pyaudio.PyAudio()
+                    device_count = p.get_device_count()
+                    p.terminate()
+                    
+                    # Vérification ressources système
+                    cpu_percent = psutil.cpu_percent(interval=0.1)
+                    ram_percent = psutil.virtual_memory().percent
+                    
+                    def update_result():
+                        if device_count > 0:
+                            self.log(f"✅ Système prêt: {device_count} périph. audio, CPU: {cpu_percent:.0f}%, RAM: {ram_percent:.0f}%")
+                            
+                            # Recommandation automatique de profil
+                            if cpu_percent < 30 and ram_percent < 50:
+                                recommended = "⚡ Ultra Low Latency recommandé"
+                            elif cpu_percent < 60:
+                                recommended = "🚀 Low Latency recommandé"
+                            else:
+                                recommended = "🎵 Quality recommandé"
+                            
+                            self.log(f"📊 {recommended}")
+                        else:
+                            self.log("⚠️ Aucun périphérique audio détecté")
+                    
+                    self.root.after(0, update_result)
+                    
+                except Exception as e:
+                    def show_diag_error():
+                        self.log(f"⚠️ Diagnostic limité: {str(e)[:30]}...")
+                    self.root.after(0, show_diag_error)
+            
+            threading.Thread(target=simple_diagnostic, daemon=True).start()
+            
+        except Exception as e:
+            logger.error(f"Erreur diagnostic automatique: {e}")
+    
     def on_closing(self):
         """Gère la fermeture de l'application"""
         try:
+            # Sauvegarde les paramètres actuels
+            self.save_current_settings()
+            
             # Arrêter le serveur si actif
             if self.server:
                 self.server.stop()
